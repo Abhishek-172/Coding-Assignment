@@ -1,0 +1,68 @@
+// Aggregation Pipeline
+db.sales.aggregate([
+  {
+    $unwind: "$items"
+  },
+  
+  // Calculate revenue for each item and format the date
+  {
+    $project: {
+      store: 1,
+      month: {
+        $dateToString: {
+          format: "%Y-%m",
+          date: "$date"
+        }
+      },
+      itemRevenue: {
+        $multiply: ["$items.quantity", "$items.price"]
+      },
+      itemPrice: "$items.price"
+    }
+  },
+  
+  // Group by store and month
+  {
+    $group: {
+      _id: {
+        store: "$store",
+        month: "$month"
+      },
+      totalRevenue: {
+        $sum: "$itemRevenue"
+      },
+      averagePrice: {
+        $avg: "$itemPrice"
+      }
+    }
+  },
+  
+  // Format the output
+  {
+    $project: {
+      _id: 0,
+      store: "$_id.store",
+      month: "$_id.month",
+      totalRevenue: {
+        $round: ["$totalRevenue", 2]
+      },
+      averagePrice: {
+        $round: ["$averagePrice", 2]
+      }
+    }
+  },
+  
+  // Sort by store and month
+  {
+    $sort: {
+      store: 1,
+      month: 1
+    }
+  }
+]);
+
+//How can we test it?
+1. First, clear the existing collection
+2. Insert test data using insertMany with the required data with multiple items, same store, 
+diffrent stores, and also same price.
+3. Run the above aggregation Pipeline against this Database collection.
